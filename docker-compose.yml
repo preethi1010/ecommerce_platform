@@ -1,0 +1,80 @@
+services:
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+
+  analytics_service:
+    build: ./ECOMMERCE_PLATFORM/analytics_service
+    ports:
+      - "5001:5000"
+    depends_on:
+      - mongodb
+
+  cart_service:
+    build: ./ECOMMERCE_PLATFORM/cart_service
+    ports:
+      - "5002:5000"
+    depends_on:
+      - mongodb
+
+  gateway_service:
+    build: ./ECOMMERCE_PLATFORM/gateway_service
+    ports:
+      - "5003:5000"
+
+  inventory_service:
+    build: ./ECOMMERCE_PLATFORM/inventory_service
+    ports:
+      - "5004:5000"
+    depends_on:
+      - mongodb
+
+  notification_service:
+    build: ./ECOMMERCE_PLATFORM/notification_service
+    ports:
+      - "5005:5000"
+    depends_on:
+      - mongodb
+
+  order_service:
+    build: ./ECOMMERCE_PLATFORM/order_service
+    ports:
+      - "5006:5000"
+    depends_on:
+      - mongodb
+
+  payment_service:
+    build: ./ECOMMERCE_PLATFORM/payment_service
+    ports:
+      - "5007:5000"
+    depends_on:
+      - mongodb
+
+  product_service:
+    build: ./ECOMMERCE_PLATFORM/product_service
+    ports:
+      - "5008:5000"
+    depends_on:
+      - mongodb
+
+  review_service:
+    build: ./ECOMMERCE_PLATFORM/review_service
+    ports:
+      - "5009:5000"
+    depends_on:
+      - mongodb
+
+  shipping_service:
+    build: ./ECOMMERCE_PLATFORM/shipping_service
+    ports:
+      - "5010:5000"
+    depends_on:
+      - mongodb
+
+  user_service:
+    build: ./ECOMMERCE_PLATFORM/user_service
+    ports:
+      - "5011:5000"
+    depends_on:
+      - mongodb
