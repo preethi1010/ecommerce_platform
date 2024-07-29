@@ -7,18 +7,18 @@ WORKDIR /app
 # Copy the requirements.txt file into the container at /app
 COPY requirements.txt /app/
 
-# Install any dependencies
-RUN pip install --upgrade pip
-RUN pip install -r requirements.txt
+# Install the Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the current directory contents into the container at /app
-COPY . /app/
+# Copy the rest of the application code into the container at /app
+COPY . /app
 
-# Expose port 5000 for the Flask application
+# Set environment variables
+ENV FLASK_APP=app.py
+ENV FLASK_RUN_HOST=0.0.0.0
+
+# Expose port 5000 for the Flask app
 EXPOSE 5000
 
-# Define environment variable
-ENV FLASK_APP=app.py
-
-# Run the Flask application
-CMD ["flask", "run", "--host=0.0.0.0"]
+# Run the Flask app
+CMD ["flask", "run"]
