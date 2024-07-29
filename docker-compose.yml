@@ -3,6 +3,14 @@ services:
     image: mongo:latest
     ports:
       - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
 
   analytics_service:
     build: ./analytics_service
@@ -50,6 +58,7 @@ services:
       - "5007:5000"
     depends_on:
       - mongodb
+      - rabbitmq
 
   product_service:
     build: ./product_service
@@ -78,3 +87,6 @@ services:
       - "5011:5000"
     depends_on:
       - mongodb
+
+volumes:
+  mongo_data:
