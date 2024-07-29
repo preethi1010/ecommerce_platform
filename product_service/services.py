@@ -3,7 +3,7 @@ from bson.objectid import ObjectId
 import os
 
 # Configuration
-MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/productdb')
+MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb://mongo:27017/product_db')
 
 # MongoDB setup
 client = MongoClient(MONGODB_URI)

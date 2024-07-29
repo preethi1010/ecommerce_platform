@@ -3,11 +3,11 @@ from bson.objectid import ObjectId
 import os
 
 # Configuration
-MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb://localhost:27017/productdb')
+MONGODB_URI = os.environ.get('MONGODB_URI', 'mongodb://mongo:27017/cart_db')
 
 # MongoDB setup
 client = MongoClient(MONGODB_URI)
-db = client.cartdb
+db = client.cart_db
 carts_collection = db.carts
 
 def create_cart(data):
