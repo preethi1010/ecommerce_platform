@@ -3,6 +3,8 @@ services:
     image: mongo:latest
     ports:
       - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
 
   analytics_service:
     build: ./analytics_service
@@ -78,3 +80,6 @@ services:
       - "5011:5000"
     depends_on:
       - mongodb
+
+volumes:
+  mongo_data:
