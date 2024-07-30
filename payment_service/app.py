@@ -5,7 +5,7 @@ from pymongo import MongoClient
 
 app = Flask(__name__)
 
-client = MongoClient(os.getenv('MONGO_URI', 'mongodb://localhost:27017/'))
+client = MongoClient(os.getenv('MONGO_URI', 'mongodb://mongodb:27017/'))
 db = client['payment_db']
 payments_collection = db['payments']
 
@@ -19,6 +19,9 @@ def send_payment_processed_message(data):
 @app.route('/process_payment', methods=['POST'])
 def process_payment():
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
     payments_collection.insert_one(data) 
     send_payment_processed_message(data)  
     return jsonify({"message": "Payment processed successfully"}), 200
@@ -26,6 +29,9 @@ def process_payment():
 @app.route('/refund', methods=['POST'])
 def refund():
     data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
     send_payment_processed_message(data)
     return jsonify({"message": "Refund processed successfully"}), 200
 
