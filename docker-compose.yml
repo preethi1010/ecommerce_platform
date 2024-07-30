@@ -1,24 +1,40 @@
 services:
   mongodb:
     image: mongo:latest
+    container_name: mongodb
     ports:
       - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
+    networks:
+      - ecommerce_network
 
-  analytics_service:
-    build: ./analytics_service
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  analytics-service:
+    build:
+      context: ./analytics_service
+    container_name: analytics-service
     ports:
       - "5001:5000"
-    depends_on:
-      - mongodb
+    networks:
+      - ecommerce_network
+  
 
   cart_service:
-    build: ./cart_service
+    build:
+      context: ./cart_service
+    container_name: cart-service
     ports:
       - "5002:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/cart_db
     depends_on:
       - mongodb
+    networks:
+      - ecommerce_network
 
   gateway_service:
     build: ./gateway_service
@@ -26,60 +42,109 @@ services:
       - "5003:5000"
 
   inventory_service:
-    build: ./inventory_service
+    build:
+      context: ./inventory_service
+    container_name: inventory-service
     ports:
       - "5004:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/inventory_db
     depends_on:
       - mongodb
+    networks:
+      - ecommerce_network
 
   notification_service:
-    build: ./notification_service
+    build:
+      context: ./notification_service
+    container_name: notification-service
     ports:
       - "5005:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/inventory_db
     depends_on:
       - mongodb
+    networks:
+      - ecommerce_network
 
   order_service:
-    build: ./order_service
+    build:
+      context: ./order_service
+    container_name: order-service
     ports:
       - "5006:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/order_db
     depends_on:
       - mongodb
+    networks:
+      - ecommerce_network
 
   payment_service:
-    build: ./payment_service
+    build:
+      context: ./payment_service
+    container_name: payment-service
     ports:
       - "5007:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/payment_db
     depends_on:
       - mongodb
+    networks:
+      - ecommerce_network
 
   product_service:
-    build: ./product_service
+    build:
+      context: ./product_service
+    container_name: product-service
     ports:
       - "5008:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/product_db
     depends_on:
       - mongodb
+    networks:
+      - ecommerce_network
 
   review_service:
-    build: ./review_service
+    build:
+      context: ./review_service
+    container_name: review-service
     ports:
       - "5009:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/review_db
     depends_on:
       - mongodb
+    networks:
+      - ecommerce_network
 
   shipping_service:
-    build: ./shipping_service
+    build:
+      context: ./shipping_service
+    container_name: shipping-service
     ports:
       - "5010:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/shipping_db
     depends_on:
       - mongodb
+    networks:
+      - ecommerce_network
 
   user_service:
-    build: ./user_service
+    build:
+      context: ./user_service
+    container_name: user-service
     ports:
       - "5011:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/user_db
     depends_on:
       - mongodb
+    networks:
+      - ecommerce_network
 
-volumes:
-  mongo_data:
+networks:
+  ecommerce_network:
+    driver: bridge

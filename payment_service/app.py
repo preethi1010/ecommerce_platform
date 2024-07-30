@@ -5,7 +5,7 @@ from pymongo import MongoClient
 
 app = Flask(__name__)
 
-client = MongoClient(os.getenv('MONGO_URI', 'mongodb://localhost:27017/'))
+client = MongoClient(os.getenv('MONGO_URI', 'mongodb://mongodb:27017/'))
 db = client['payment_db']
 payments_collection = db['payments']
 
@@ -30,4 +30,4 @@ def refund():
     return jsonify({"message": "Refund processed successfully"}), 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5007)
