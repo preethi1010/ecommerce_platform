@@ -8,10 +8,12 @@ services:
       - ecommerce_network
 
   rabbitmq:
-    image: rabbitmq:3-management
+    image: rabbitmq:latest
+    container_name: rabbitmq
     ports:
       - "5672:5672"
-      - "15672:15672"
+    networks:
+      - ecommerce_network
 
   analytics-service:
     build:
@@ -88,8 +90,10 @@ services:
       - "5007:5000"
     environment:
       MONGO_URI: mongodb://mongodb:27017/payment_db
+      RABBITMQ_URL: amqp://rabbitmq:5672/
     depends_on:
       - mongodb
+      - rabbitmq
     networks:
       - ecommerce_network
 
