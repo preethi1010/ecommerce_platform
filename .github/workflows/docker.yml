@@ -35,5 +35,5 @@ jobs:
       - name: Build and push Docker image
         run: |
           cd ${{ matrix.service }}
-          docker build -t preethib1010/ecommerce/${{ matrix.service }}:latest .
-          docker push preethib1010/ecommerce/${{ matrix.service }}:latest
+          docker build -t preethib1010/myapp:${{ matrix.service }} -f ${{ matrix.service }}/Dockerfile .
+          docker push preethib1010/myapp:${{ matrix.service }}
