@@ -1,16 +1,21 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, json
 from flask_pymongo import PyMongo
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
-import datetime
+from datetime import datetime
 from functools import wraps
 from bson.objectid import ObjectId
+from pykafka import KafkaClient
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['MONGO_URI'] = 'mongodb://mongodb:27017/users_db'
 mongo = PyMongo(app)
 users = mongo.db.users
+
+# Kafka client setup
+kafka_client = KafkaClient(hosts='kafka:9092')
+topic = kafka_client.topics[b'user_events']
 
 def token_required(f):
     @wraps(f)
@@ -35,6 +40,17 @@ def register_user():
         'email': data['email'],
         'password': hashed_password
     }).inserted_id
+    
+    message = {
+        'event': 'user_registered',
+        "timestamp": datetime.datetime.utcnow().isoformat() + 'Z',
+        'user_id': str(new_user_id),
+        'user_data': data['email']
+    }
+
+    with topic.get_producer() as producer:
+        producer.produce(json.dumps(message).encode('utf-8'))
+    
     return jsonify({'message': 'Registered successfully', 'user_id': str(new_user_id)})
 
 @app.route('/login', methods=['POST'])

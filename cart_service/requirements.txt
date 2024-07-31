@@ -1,3 +1,4 @@
 Flask==2.0.3
 pymongo==3.12.1
+pykafka==2.8.0
 Werkzeug==2.0.3

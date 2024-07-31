@@ -15,7 +15,6 @@ def create_cart_route():
         cart = create_cart(data)
         return jsonify(cart), 201
     except Exception as e:
-        logger.error(f"Error creating cart: {e}")
         return jsonify({"error": "Internal Server Error"}), 500
 
 @cart_bp.route('/', methods=['GET'])

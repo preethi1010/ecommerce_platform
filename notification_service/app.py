@@ -1,11 +1,30 @@
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request, json
 from flask_pymongo import PyMongo
+from pykafka import KafkaClient
+from pykafka.common import OffsetType
+import threading
 from bson.objectid import ObjectId
 
 app = Flask(__name__)
 app.config['MONGO_URI'] = 'mongodb://mongodb:27017/notification_db'
 mongo = PyMongo(app)
 notifications = mongo.db.notifications
+
+# Kafka client setup
+kafka_client = KafkaClient(hosts='kafka:9092')
+topic = kafka_client.topics[b'user_events']
+consumer = topic.get_simple_consumer(consumer_group="notification_service", auto_offset_reset=OffsetType.LATEST, reset_offset_on_start=True)
+def consume_messages():
+    for message in consumer:
+        if message is not None:
+            message_value = json.loads(message.value.decode('utf-8'))
+            if message_value['event'] == 'user_registered':
+                notifications.insert_one({
+                    'user_id': message_value['user_id'],
+                    'message': f"New user registered with email {message_value['user_data']}"
+                })
+# Start Kafka consumer in a separate thread
+threading.Thread(target=consume_messages, daemon=True).start()
 
 @app.route('/notifications', methods=['GET'])
 def get_notifications():

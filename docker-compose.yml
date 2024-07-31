@@ -6,6 +6,37 @@ services:
       - "27017:27017"
     networks:
       - ecommerce_network
+  zookeeper:
+    restart: always
+    image: docker.io/bitnami/zookeeper:3.8
+    ports:
+      - "2181:2181"
+    volumes:
+      - "zookeeper-volume:/bitnami"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - ecommerce_network
+
+  kafka:
+    restart: always
+    container_name: kafka
+    image: docker.io/bitnami/kafka:3.3
+    ports:
+      - "9092:9092"
+    volumes:
+      - "kafka-volume:/bitnami"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    depends_on:
+      - zookeeper
+    networks:
+      - ecommerce_network
 
   rabbitmq:
     image: rabbitmq:latest
@@ -23,6 +54,9 @@ services:
       - "5001:5000"
     networks:
       - ecommerce_network
+    restart: on-failure
+    environment:
+      - KAFKA_BROKERS=kafka:9092
   
 
   cart_service:
@@ -32,11 +66,14 @@ services:
     ports:
       - "5002:5000"
     environment:
-      MONGO_URI: mongodb://mongodb:27017/cart_db
+       - MONGO_URI= mongodb://mongodb:27017/cart_db
+       - KAFKA_BROKERS=kafka:9092
     depends_on:
       - mongodb
+    restart: on-failure
     networks:
       - ecommerce_network
+      
 
   gateway_service:
     build: ./gateway_service
@@ -64,8 +101,10 @@ services:
       - "5005:5000"
     environment:
       MONGO_URI: mongodb://mongodb:27017/notification_db
+    restart: on-failure
     depends_on:
       - mongodb
+      - kafka
     networks:
       - ecommerce_network
 
@@ -144,11 +183,17 @@ services:
       - "5011:5000"
     environment:
       MONGO_URI: mongodb://mongodb:27017/user_db
+    restart: on-failure
     depends_on:
       - mongodb
+      - kafka
     networks:
       - ecommerce_network
 
 networks:
   ecommerce_network:
     driver: bridge
+
+volumes:
+  kafka-volume:
+  zookeeper-volume:
