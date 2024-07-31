@@ -1,30 +1,32 @@
 from flask import Flask, request, jsonify
 from pymongo import MongoClient
 import os
-import requests
-from bson.json_util import dumps, loads
+import json
+from pykafka import KafkaClient
 
 app = Flask(__name__)
 
+# MongoDB setup
 client = MongoClient(os.getenv('MONGO_URI', 'mongodb://localhost:27017/'))
 db = client['shipping_db']
 shipments_collection = db['shipments']
 
-# URL for the notification service
-NOTIFICATION_SERVICE_URL = 'http://172.29.0.4:5000/notification'
+# Kafka client setup
+kafka_client = KafkaClient(hosts='kafka:9092')
+topic = kafka_client.topics['shipment_events']
 
-def notify_service(shipment_id, message, notification_type):
-    notification_data = {
-        'shipment_id': shipment_id,
-        'message': message,
-        'type': notification_type
-    }
-
+def publish_to_kafka(event_type, shipment_id, shipment_message):    
     try:
-        response = requests.post(NOTIFICATION_SERVICE_URL, json=notification_data)
-        response.raise_for_status()  # Raise an error for bad status codes
-    except requests.exceptions.RequestException as e:
-        print(f"Failed to notify: {e}")
+
+        message = {
+        'event': event_type,
+        'shipment_id': str(shipment_id),
+        'message': str(shipment_message)
+        }
+        with topic.get_producer() as producer:
+                producer.produce(json.dumps(message).encode('utf-8'))
+    except Exception as e:
+        raise Exception(f"Error sending topic message: {e}")
 
 @app.route('/shipments', methods=['POST'])
 def create_shipment():
@@ -33,15 +35,15 @@ def create_shipment():
     
     shipments_collection.insert_one(shipment)
     
-    # Create a notification
-    notify_service(shipment_id, f'Shipment {shipment_id} created.', 'shipment_created')
+    # Publish to Kafka
+    publish_to_kafka('shipment_created', shipment_id, f'Shipment {shipment_id} created.')
 
     return jsonify({'message': 'Shipment created successfully'}), 201
 
 @app.route('/shipments', methods=['GET'])
 def get_shipments():
     shipments = list(shipments_collection.find({}, {'_id': False}))
-    return dumps(shipments), 200
+    return jsonify(shipments), 200
 
 @app.route('/shipments/<shipment_id>', methods=['GET'])
 def get_shipment(shipment_id):
@@ -57,8 +59,8 @@ def update_shipment(shipment_id):
     result = shipments_collection.update_one({'shipment_id': shipment_id}, {'$set': shipment})
     
     if result.matched_count:
-        # Create a notification
-        notify_service(shipment_id, f'Shipment {shipment_id} updated.', 'shipment_updated')
+        # Publish to Kafka
+        publish_to_kafka('shipment_updated', shipment_id, f'Shipment {shipment_id} updated.')
         return jsonify({'message': 'Shipment updated successfully'}), 200
     else:
         return jsonify({'error': 'Shipment not found'}), 404
@@ -67,6 +69,8 @@ def update_shipment(shipment_id):
 def delete_shipment(shipment_id):
     result = shipments_collection.delete_one({'shipment_id': shipment_id})
     if result.deleted_count:
+        # Publish to Kafka
+        publish_to_kafka('shipment_deleted', shipment_id, f'Shipment {shipment_id} deleted.')
         return jsonify({'message': 'Shipment deleted successfully'}), 200
     else:
         return jsonify({'error': 'Shipment not found'}), 404

@@ -125,9 +125,11 @@ services:
     environment:
       MONGO_URI: mongodb://mongodb:27017/payment_db
       RABBITMQ_URL: amqp://rabbitmq:5672/
+    restart: on-failure
     depends_on:
       - mongodb
       - rabbitmq
+      - kafka
     networks:
       - ecommerce_network
 
@@ -165,8 +167,10 @@ services:
       - "5010:5000"
     environment:
       MONGO_URI: mongodb://mongodb:27017/shipping_db
+    restart: on-failure
     depends_on:
       - mongodb
+      - kafka
     networks:
       - ecommerce_network
 
