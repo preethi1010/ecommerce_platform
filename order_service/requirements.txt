@@ -1,3 +1,4 @@
 Flask==2.0.3
 pymongo==3.12.1
 Werkzeug==2.0.3
+pika==1.2.1
