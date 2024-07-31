@@ -35,8 +35,8 @@ def consume_messages():
             data = json.loads(message.value.decode('utf-8'))
             notifications.insert_one({'source': 'payment_events', 'data': data})
             payment_consumer.commit_offsets()
-            
-    for message in payment_consumer:
+
+    for message in shipment_consumer:
         if message is not None:
             data = json.loads(message.value.decode('utf-8'))
             notifications.insert_one({'source': 'shipment_events', 'data': data})
