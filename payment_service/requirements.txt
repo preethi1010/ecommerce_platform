@@ -3,3 +3,4 @@ Flask-PyMongo==2.3.0
 Werkzeug==2.1.0
 PyJWT==2.3.0
 pika==1.2.1
+pykafka==2.8.0

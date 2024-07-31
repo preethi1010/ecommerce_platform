@@ -1,33 +1,68 @@
-import os
-import pika
 from flask import Flask, request, jsonify
-from pymongo import MongoClient
+from flask_pymongo import PyMongo
+from pykafka import KafkaClient
+from bson import ObjectId
+import json
 
 app = Flask(__name__)
 
-client = MongoClient(os.getenv('MONGO_URI', 'mongodb://mongodb:27017/'))
-db = client['payment_db']
-payments_collection = db['payments']
+# Config
+app.config['MONGO_URI'] = 'mongodb://mongodb:27017/payments'
+mongo = PyMongo(app)
 
-def send_payment_processed_message(data):
-    connection = pika.BlockingConnection(pika.ConnectionParameters('rabbitmq'))
-    channel = connection.channel()
-    channel.queue_declare(queue='payment_queue')
-    channel.basic_publish(exchange='', routing_key='payment_queue', body=str(data))
-    connection.close()
+# Kafka client setup
+kafka_client = KafkaClient(hosts='kafka:9092')
+payment_producer = kafka_client.topics['payment_events'].get_sync_producer()
+
+def send_payment_event(data):
+    # Convert ObjectId to string if present
+    if '_id' in data:
+        data['_id'] = str(data['_id'])
+    payment_producer.produce(json.dumps(data).encode('utf-8'))
+
+@app.route('/payments', methods=['GET'])
+def get_all_payments():
+    payments = mongo.db.payments.find()
+    output = [{'payment_id': payment['payment_id'], 'user': payment['user'], 'amount': payment['amount'], 'status': payment['status']} for payment in payments]
+    return jsonify({'result': output})
+
+@app.route('/payment/<payment_id>', methods=['GET'])
+def get_payment_by_id(payment_id):
+    payment = mongo.db.payments.find_one({'payment_id': payment_id})
+    if payment:
+        output = {'payment_id': payment['payment_id'], 'user': payment['user'], 'amount': payment['amount'], 'status': payment['status']}
+    else:
+        output = 'No results found'
+    return jsonify({'result': output})
+
+@app.route('/payment', methods=['POST'])
+def add_payment():
+    data = request.get_json()
+    payment = {
+        'payment_id': data['payment_id'],
+        'user': data['user'],
+        'amount': data['amount'],
+        'status': data['status']
+    }
+    result = mongo.db.payments.insert_one(payment)
+    payment['_id'] = str(result.inserted_id)
+    send_payment_event({'source': 'payment_service', 'event': 'payment_processed', 'data': payment})
+    return jsonify({'message': 'Payment added successfully!'})
 
 @app.route('/process_payment', methods=['POST'])
 def process_payment():
     data = request.get_json()
-    payments_collection.insert_one(data) 
-    send_payment_processed_message(data)  
-    return jsonify({"message": "Payment processed successfully"}), 200
-
-@app.route('/refund', methods=['POST'])
-def refund():
-    data = request.get_json()
-    send_payment_processed_message(data)
-    return jsonify({"message": "Refund processed successfully"}), 200
+    payment = {
+        'payment_id': data['payment_id'],
+        'amount': data['amount'],
+        'currency': data['currency'],
+        'method': data['method'],
+        'status': data['status']
+    }
+    result = mongo.db.payments.insert_one(payment)
+    payment['_id'] = str(result.inserted_id)
+    send_payment_event({'source': 'payment_service', 'event': 'payment_processed', 'data': payment})
+    return jsonify({'message': 'Payment processed successfully!'})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5007)
+    app.run(debug=True, host='0.0.0.0')
