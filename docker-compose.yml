@@ -1,80 +1,198 @@
 services:
   mongodb:
     image: mongo:latest
+    container_name: mongodb
     ports:
       - "27017:27017"
+    networks:
+      - ecommerce_network
+  zookeeper:
+    restart: always
+    image: docker.io/bitnami/zookeeper:3.8
+    ports:
+      - "2181:2181"
+    volumes:
+      - "zookeeper-volume:/bitnami"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks:
+      - ecommerce_network
 
-  analytics_service:
-    build: ./ECOMMERCE_PLATFORM/analytics_service
+  kafka:
+    restart: always
+    container_name: kafka
+    image: docker.io/bitnami/kafka:3.3
+    ports:
+      - "9092:9092"
+    volumes:
+      - "kafka-volume:/bitnami"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'PLAINTEXT:PLAINTEXT'
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    depends_on:
+      - zookeeper
+    networks:
+      - ecommerce_network
+
+  rabbitmq:
+    image: rabbitmq:latest
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+    networks:
+      - ecommerce_network
+
+  analytics-service:
+    build:
+      context: ./analytics_service
+    container_name: analytics-service
     ports:
       - "5001:5000"
-    depends_on:
-      - mongodb
+    networks:
+      - ecommerce_network
+    restart: on-failure
+    environment:
+      - KAFKA_BROKERS=kafka:9092
+  
 
   cart_service:
-    build: ./ECOMMERCE_PLATFORM/cart_service
+    build:
+      context: ./cart_service
+    container_name: cart-service
     ports:
       - "5002:5000"
+    environment:
+       - MONGO_URI= mongodb://mongodb:27017/cart_db
+       - KAFKA_BROKERS=kafka:9092
     depends_on:
       - mongodb
-
-  gateway_service:
-    build: ./ECOMMERCE_PLATFORM/gateway_service
-    ports:
-      - "5003:5000"
+    restart: on-failure
+    networks:
+      - ecommerce_network
+      
 
   inventory_service:
-    build: ./ECOMMERCE_PLATFORM/inventory_service
+    build:
+      context: ./inventory_service
+    container_name: inventory-service
     ports:
       - "5004:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/inventory_db
     depends_on:
       - mongodb
+    networks:
+      - ecommerce_network
 
   notification_service:
-    build: ./ECOMMERCE_PLATFORM/notification_service
+    build:
+      context: ./notification_service
+    container_name: notification-service
     ports:
       - "5005:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/notification_db
+    restart: on-failure
     depends_on:
       - mongodb
+      - kafka
+    networks:
+      - ecommerce_network
 
   order_service:
-    build: ./ECOMMERCE_PLATFORM/order_service
+    build:
+      context: ./order_service
+    container_name: order-service
     ports:
       - "5006:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/order_db
     depends_on:
       - mongodb
+    networks:
+      - ecommerce_network
 
   payment_service:
-    build: ./ECOMMERCE_PLATFORM/payment_service
+    build:
+      context: ./payment_service
+    container_name: payment-service
     ports:
       - "5007:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/payment_db
+      RABBITMQ_URL: amqp://rabbitmq:5672/
+    restart: on-failure
     depends_on:
       - mongodb
+      - rabbitmq
+      - kafka
+    networks:
+      - ecommerce_network
 
   product_service:
-    build: ./ECOMMERCE_PLATFORM/product_service
+    build:
+      context: ./product_service
+    container_name: product-service
     ports:
       - "5008:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/product_db
     depends_on:
       - mongodb
+    networks:
+      - ecommerce_network
 
   review_service:
-    build: ./ECOMMERCE_PLATFORM/review_service
+    build:
+      context: ./review_service
+    container_name: review-service
     ports:
       - "5009:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/review_db
     depends_on:
       - mongodb
+    networks:
+      - ecommerce_network
 
   shipping_service:
-    build: ./ECOMMERCE_PLATFORM/shipping_service
+    build:
+      context: ./shipping_service
+    container_name: shipping-service
     ports:
       - "5010:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/shipping_db
+    restart: on-failure
     depends_on:
       - mongodb
+      - kafka
+    networks:
+      - ecommerce_network
 
   user_service:
-    build: ./ECOMMERCE_PLATFORM/user_service
+    build:
+      context: ./user_service
+    container_name: user-service
     ports:
       - "5011:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/user_db
+    restart: on-failure
     depends_on:
       - mongodb
+      - kafka
+    networks:
+      - ecommerce_network
+
+networks:
+  ecommerce_network:
+    driver: bridge
+
+volumes:
+  kafka-volume:
+  zookeeper-volume:
