@@ -75,11 +75,6 @@ services:
       - ecommerce_network
       
 
-  gateway_service:
-    build: ./gateway_service
-    ports:
-      - "5003:5000"
-
   inventory_service:
     build:
       context: ./inventory_service
