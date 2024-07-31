@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, json
 from flask_pymongo import PyMongo
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
-from datetime import datetime
+import datetime
 from functools import wraps
 from bson.objectid import ObjectId
 from pykafka import KafkaClient
@@ -43,7 +43,6 @@ def register_user():
     
     message = {
         'event': 'user_registered',
-        "timestamp": datetime.datetime.utcnow().isoformat() + 'Z',
         'user_id': str(new_user_id),
         'user_data': data['email']
     }
