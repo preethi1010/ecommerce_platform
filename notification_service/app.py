@@ -12,17 +12,36 @@ notifications = mongo.db.notifications
 
 # Kafka client setup
 kafka_client = KafkaClient(hosts='kafka:9092')
-topic = kafka_client.topics[b'user_events']
-consumer = topic.get_simple_consumer(consumer_group="notification_service", auto_offset_reset=OffsetType.LATEST, reset_offset_on_start=True)
+def create_consumer(topic_name):
+    topic = kafka_client.topics[topic_name]
+    return topic.get_simple_consumer(
+        consumer_group=f'{topic_name}_group',
+        auto_offset_reset=OffsetType.LATEST,
+        reset_offset_on_start=True
+    )
+
+user_consumer = create_consumer('user_events')
+payment_consumer = create_consumer('payment_events')
+shipment_consumer= create_consumer('shipment_events')
 def consume_messages():
-    for message in consumer:
+    for message in user_consumer:
         if message is not None:
-            message_value = json.loads(message.value.decode('utf-8'))
-            if message_value['event'] == 'user_registered':
-                notifications.insert_one({
-                    'user_id': message_value['user_id'],
-                    'message': f"New user registered with email {message_value['user_data']}"
-                })
+            data = json.loads(message.value.decode('utf-8'))
+            notifications.insert_one({'source': 'user_events', 'data': data})
+            user_consumer.commit_offsets()
+    
+    for message in payment_consumer:
+        if message is not None:
+            data = json.loads(message.value.decode('utf-8'))
+            notifications.insert_one({'source': 'payment_events', 'data': data})
+            payment_consumer.commit_offsets()
+            
+    for message in payment_consumer:
+        if message is not None:
+            data = json.loads(message.value.decode('utf-8'))
+            notifications.insert_one({'source': 'shipment_events', 'data': data})
+            shipment_consumer.commit_offsets()
+
 # Start Kafka consumer in a separate thread
 threading.Thread(target=consume_messages, daemon=True).start()
 

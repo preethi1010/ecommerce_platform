@@ -15,7 +15,7 @@ users = mongo.db.users
 
 # Kafka client setup
 kafka_client = KafkaClient(hosts='kafka:9092')
-topic = kafka_client.topics[b'user_events']
+topic = kafka_client.topics['user_events']
 
 def token_required(f):
     @wraps(f)
